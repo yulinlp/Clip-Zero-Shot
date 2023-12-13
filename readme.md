@@ -1,5 +1,13 @@
 # README
 
+## 项目简述
+
+本项目基于Clip（ViT-B/32, RN50x16）和 SAM，不进行任何训练，不引入任何类型的其它参数，在Refcoco, Refcoco+数据集上进行zero-shot算法效果提升。主要采用test-time-training方式，在文本端和视觉端进行prompt调整，并引入了基于统计的方法等精心设计的trick  
+
+本项目在2023年第五届全球人工智能校园算法精英大赛中取得全国二等奖(rank 10)
+
+详细任务描述见赛事链接 http://bdc.saikr.com/c/cql/48004
+
 ## 命令说明
 
 ### 如何运行
@@ -10,7 +18,9 @@
 pip install -r requirements.txt
 ```
 
-将sam模型下载至 `models/` 文件夹下
+将SAM模型下载至 `models/` 文件夹下
+
+SAM模型官方下载链接: https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
 
 2.  运行
 
@@ -148,7 +158,9 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
 
 ```
 
-## 算法
+## 最优算法
+
+这里只对部分重要的算法进行说明，具体实现的细节请参看源码
 
 1. 对于每张图片及其中的每个检测框，生成一系列新图片，图片数量取决于呈现方法个数(box_representation_method)，现有7种方法：blur,circle,crop,gray,edge,blur-circle,gray-circle。此外，如果启用了fine_grained(--fine_grained true)，那么blur,gray,blur-circle,gray-circle这4个方法处理方式会有所改变。
     - blur: 不启用fine_grained：将检测框以外的部分模糊。启用fine_grained：将将检测框中的主体部分以外的部分模糊。
@@ -160,12 +172,16 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
     - gray-circle: 不启用fine_grained：将检测框以外的部分变成黑白，再用圆圈标注检测框位置。启用fine_grained：将检测框中的主体部分以外的部分变成黑白，再用圆圈标注检测框位置。
 如果启用了resize_square，这些图片还会通过填充灰色变为正方形。检测框的最终得分为：这些图片与文本得分的总和。
 
-2. 抽取一系列文本(数量为--size_Q)与每个检测框计算得分，作为这个检测框的偏差，在计算检测框得分时减去它的偏差。越大效果越好，但需要更多显存，均衡后最佳值为300。
+2. 采用基于统计的方法，抽取一系列文本(数量为--size_Q)与每个检测框计算得分，作为这个检测框的偏差，在计算检测框得分时减去它的偏差。越大效果越好，但需要更多显存，均衡后最佳值为300。
 
-3. 分析句子中的主语与谓语，构建空间关系。
+3. 分析句子中的主语与谓语，构建空间关系。这一部分基本参考了ReCLIP的设计，未做创新。
+
+4. 基于先验知识进行阈值筛选。我们假设像素占比过少的目标不会成为候选答案，因此通过阈值筛选掉一部分目标。
+
+5. 文本端人工设计prompt。经过测试，'this is a photo of '相比于普遍使用的'a photo of '效果更好。
 
 ## 数据集
 
-数据集下载链接：  
+数据集下载链接：https://pan.baidu.com/s/1CBcOio3p23TPGSJhrD32Rw?pwd=55w2 
 
 相关说明详见 `data/readme.md`
